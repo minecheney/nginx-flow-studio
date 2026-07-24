@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['IBM Plex Sans', 'Microsoft YaHei UI', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
@@ -65,6 +65,13 @@ export default {
           server: "hsl(var(--node-server))",
           location: "hsl(var(--node-location))",
           upstream: "hsl(var(--node-upstream))",
+          stream: "hsl(var(--node-stream))",
+          "stream-upstream": "hsl(var(--node-stream-upstream))",
+        },
+        status: {
+          success: "hsl(var(--status-success))",
+          warning: "hsl(var(--status-warning))",
+          info: "hsl(var(--status-info))",
         },
         code: {
           background: "hsl(var(--code-background))",
@@ -86,6 +93,11 @@ export default {
       boxShadow: {
         node: "var(--shadow-node)",
         panel: "var(--shadow-panel)",
+        server: "var(--shadow-server)",
+        location: "var(--shadow-location)",
+        upstream: "var(--shadow-upstream)",
+        stream: "var(--shadow-stream)",
+        "stream-upstream": "var(--shadow-stream-upstream)",
       },
       backgroundImage: {
         "gradient-primary": "var(--gradient-primary)",

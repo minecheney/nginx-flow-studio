@@ -5,6 +5,9 @@ import {
   LocationConfig,
   UpstreamConfig,
   UpstreamServer,
+  StreamConfig,
+  StreamServerConfig,
+  StreamUpstreamConfig,
   GlobalConfig,
   EventsConfig,
   HttpConfig,
@@ -143,10 +146,25 @@ function tokenize(input: string): Token[] {
       const startColumn = column;
       let value = '';
       
-      while (pos < input.length && /[^\s;{}'\"#]/.test(input[pos])) {
-        value += input[pos];
-        pos++;
-        column++;
+      while (pos < input.length) {
+        if (/[^\s;{}'\"#]/.test(input[pos])) {
+          value += input[pos];
+          pos++;
+          column++;
+          continue;
+        }
+        // Regex quantifiers in unquoted location patterns are part of the
+        // argument, not Nginx block delimiters: ^/files/[0-9]{2,4}$.
+        if (input[pos] === '{') {
+          const quantifier = input.slice(pos).match(/^\{\d+(?:,\d*)?\}/)?.[0];
+          if (quantifier) {
+            value += quantifier;
+            pos += quantifier.length;
+            column += quantifier.length;
+            continue;
+          }
+        }
+        break;
       }
       
       tokens.push({ type: 'WORD', value, line, column: startColumn });
@@ -558,6 +576,108 @@ function convertBlockToUpstream(block: ASTBlock): UpstreamConfig {
   return upstream;
 }
 
+function convertBlockToStreamUpstream(block: ASTBlock): StreamUpstreamConfig {
+  const upstream: StreamUpstreamConfig = {
+    id: uuidv4(),
+    name: block.args[0] || 'socket_proxy',
+    hashKey: '',
+    hashConsistent: false,
+    servers: [],
+    customDirectives: '',
+  };
+  const customDirectives: string[] = [];
+
+  for (const child of block.children) {
+    if (child.type !== 'directive') {
+      customDirectives.push(`# Block: ${child.name}`);
+      continue;
+    }
+    switch (child.name) {
+      case 'hash':
+        upstream.hashConsistent = child.args.includes('consistent');
+        upstream.hashKey = child.args.filter((arg) => arg !== 'consistent').join(' ');
+        break;
+      case 'server':
+        upstream.servers.push(parseUpstreamServer(child.args) as UpstreamServer);
+        break;
+      default:
+        customDirectives.push(`${child.name} ${child.args.join(' ')};`);
+    }
+  }
+
+  upstream.customDirectives = customDirectives.join('\n');
+  return upstream;
+}
+
+function convertBlockToStreamServer(block: ASTBlock, index: number): StreamServerConfig {
+  const server: StreamServerConfig = {
+    id: uuidv4(),
+    name: `TCP Proxy ${index + 1}`,
+    listenPort: 9000,
+    udp: false,
+    proxyPass: '',
+    proxyConnectTimeout: '10s',
+    proxyTimeout: '5m',
+    socketKeepalive: false,
+    customDirectives: '',
+  };
+  const customDirectives: string[] = [];
+
+  for (const child of block.children) {
+    if (child.type !== 'directive') {
+      customDirectives.push(`# Block: ${child.name}`);
+      continue;
+    }
+    switch (child.name) {
+      case 'listen':
+        server.listenPort = parseListenDirective(child.args).port;
+        server.udp = child.args.includes('udp');
+        break;
+      case 'proxy_pass':
+        server.proxyPass = child.args.join(' ');
+        break;
+      case 'proxy_connect_timeout':
+        server.proxyConnectTimeout = child.args[0] || '10s';
+        break;
+      case 'proxy_timeout':
+        server.proxyTimeout = child.args[0] || '5m';
+        break;
+      case 'proxy_socket_keepalive':
+        server.socketKeepalive = child.args[0] === 'on';
+        break;
+      default:
+        customDirectives.push(`${child.name} ${child.args.join(' ')};`);
+    }
+  }
+
+  server.customDirectives = customDirectives.join('\n');
+  return server;
+}
+
+function convertStreamBlock(block: ASTBlock): StreamConfig {
+  const stream: StreamConfig = {
+    upstreams: [],
+    servers: [],
+    customDirectives: '',
+  };
+  const customDirectives: string[] = [];
+
+  for (const child of block.children) {
+    if (child.type === 'block' && child.name === 'upstream') {
+      stream.upstreams.push(convertBlockToStreamUpstream(child));
+    } else if (child.type === 'block' && child.name === 'server') {
+      stream.servers.push(convertBlockToStreamServer(child, stream.servers.length));
+    } else if (child.type === 'directive') {
+      customDirectives.push(`${child.name} ${child.args.join(' ')};`);
+    } else if (child.type === 'block') {
+      customDirectives.push(`# Block: ${child.name}`);
+    }
+  }
+
+  stream.customDirectives = customDirectives.join('\n');
+  return stream;
+}
+
 function convertDirectivesToGlobal(directives: ASTDirective[]): Partial<GlobalConfig> {
   const global: Partial<GlobalConfig> = {};
   const customDirectives: string[] = [];
@@ -717,12 +837,17 @@ export function parseNginxConfig(configString: string): NginxConfig {
   const { directives, blocks } = parser.parseRoot();
 
   const config: NginxConfig = {
-    global: { ...defaultGlobalConfig },
-    events: { ...defaultEventsConfig },
-    http: { ...defaultHttpConfig },
+    global: { ...defaultGlobalConfig, customDirectives: '' },
+    events: { ...defaultEventsConfig, customDirectives: '' },
+    http: { ...defaultHttpConfig, customDirectives: '' },
     upstreams: [],
     servers: [],
     locations: [],
+    stream: {
+      upstreams: [],
+      servers: [],
+      customDirectives: '',
+    },
     // Store the original raw config to preserve it exactly when generating output
     rawConfig: configString,
   };
@@ -742,6 +867,8 @@ export function parseNginxConfig(configString: string): NginxConfig {
       config.servers.push(...servers);
       config.locations.push(...locations);
       config.upstreams.push(...upstreams);
+    } else if (block.name === 'stream') {
+      config.stream = convertStreamBlock(block);
     } else if (block.name === 'upstream') {
       // Upstream at root level (outside http, less common but valid)
       config.upstreams.push(convertBlockToUpstream(block));

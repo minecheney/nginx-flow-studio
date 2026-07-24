@@ -44,11 +44,11 @@ const LocationNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   // Get modifier label for display
   const getModifierBadge = () => {
     switch (nodeData.modifier) {
-      case '=': return { label: '精确', color: 'bg-red-500/20 text-red-400' };
-      case '^~': return { label: '前缀优先', color: 'bg-orange-500/20 text-orange-400' };
-      case '~': return { label: '正则', color: 'bg-purple-500/20 text-purple-400' };
-      case '~*': return { label: '正则(i)', color: 'bg-purple-500/20 text-purple-400' };
-      default: return { label: '前缀', color: 'bg-slate-500/20 text-slate-400' };
+      case '=': return { label: '精确', color: 'bg-destructive/10 text-destructive border-destructive/20' };
+      case '^~': return { label: '前缀优先', color: 'bg-status-warning/10 text-status-warning border-status-warning/20' };
+      case '~': return { label: '正则', color: 'bg-node-stream-upstream/10 text-node-stream-upstream border-node-stream-upstream/20' };
+      case '~*': return { label: '正则(i)', color: 'bg-node-stream-upstream/10 text-node-stream-upstream border-node-stream-upstream/20' };
+      default: return { label: '前缀', color: 'bg-muted text-muted-foreground border-border' };
     }
   };
 
@@ -59,7 +59,7 @@ const LocationNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       {/* Match tooltip with detailed reason */}
       {nodeData.isMatched && (
         <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-10 animate-fade-in">
-          <div className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg bg-green-500/90 text-white text-xs font-medium shadow-lg whitespace-nowrap">
+          <div className="flex flex-col items-center gap-1 rounded-lg border border-status-success/30 bg-status-success/90 px-3 py-2 text-xs font-medium text-background shadow-panel whitespace-nowrap">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>{nodeData.priorityLabel}</span>
@@ -76,13 +76,12 @@ const LocationNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       <div
         onClick={handleClick}
         className={cn(
-          'px-4 py-3 rounded-2xl border-2 min-w-[200px] cursor-pointer transition-all duration-200',
-          'bg-gradient-to-br from-card to-muted/50 hover:from-muted hover:to-muted',
+          'node-surface px-4 py-3 rounded-xl border min-w-[200px] cursor-pointer transition-all duration-200 hover:bg-muted/90',
           nodeData.isMatched
-            ? 'border-green-500 shadow-[0_4px_20px_-4px_hsl(142_76%_50%/0.5)] ring-2 ring-green-500/30'
+            ? 'border-status-success shadow-location ring-2 ring-status-success/25'
             : selected
-              ? 'border-node-location shadow-[0_4px_20px_-4px_hsl(160_84%_39%/0.4)] ring-1 ring-node-location/20'
-              : 'border-node-location/30 hover:border-node-location/60'
+              ? 'border-node-location shadow-location ring-1 ring-node-location/20'
+              : 'border-node-location/25 hover:border-node-location/55'
         )}
       >
         <Handle
@@ -102,15 +101,15 @@ const LocationNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             <div className="flex items-center gap-2">
               <div className={cn(
                 "p-1.5 rounded-lg",
-                nodeData.isMatched ? "bg-green-500/20" : "bg-node-location/15"
+                nodeData.isMatched ? "bg-status-success/15" : "border border-node-location/15 bg-node-location/10"
               )}>
                 <MapPin className={cn(
                   "w-4 h-4",
-                  nodeData.isMatched ? "text-green-500" : "text-node-location"
+                  nodeData.isMatched ? "text-status-success" : "text-node-location"
                 )} />
               </div>
               <span className={cn(
-                "text-[10px] font-medium px-2 py-0.5 rounded-full",
+                "text-[10px] font-medium px-2 py-0.5 rounded-full border",
                 modifierBadge.color
               )}>
                 {modifierBadge.label}

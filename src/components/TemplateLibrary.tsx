@@ -66,11 +66,11 @@ const TemplateCard: React.FC<TemplateCardProps> = ({ template, onSelect, languag
   
   const getCategoryColor = (category: TemplateCategory) => {
     const colors: Record<TemplateCategory, string> = {
-      frontend: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-      backend: 'bg-green-500/10 text-green-500 border-green-500/20',
-      cms: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-      ha: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-      security: 'bg-red-500/10 text-red-500 border-red-500/20',
+      frontend: 'bg-node-server/10 text-node-server border-node-server/20',
+      backend: 'bg-node-location/10 text-node-location border-node-location/20',
+      cms: 'bg-node-stream/10 text-node-stream border-node-stream/20',
+      ha: 'bg-node-upstream/10 text-node-upstream border-node-upstream/20',
+      security: 'bg-destructive/10 text-destructive border-destructive/20',
     };
     return colors[category];
   };

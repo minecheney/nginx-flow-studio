@@ -76,6 +76,33 @@ export interface UpstreamConfig {
   customDirectives: string;
 }
 
+export interface StreamUpstreamConfig {
+  id: string;
+  name: string;
+  hashKey: string;
+  hashConsistent: boolean;
+  servers: UpstreamServer[];
+  customDirectives: string;
+}
+
+export interface StreamServerConfig {
+  id: string;
+  name: string;
+  listenPort: number;
+  udp: boolean;
+  proxyPass: string;
+  proxyConnectTimeout: string;
+  proxyTimeout: string;
+  socketKeepalive: boolean;
+  customDirectives: string;
+}
+
+export interface StreamConfig {
+  upstreams: StreamUpstreamConfig[];
+  servers: StreamServerConfig[];
+  customDirectives: string;
+}
+
 export interface SSLConfig {
   enabled: boolean;
   certificate: string;
@@ -161,6 +188,7 @@ export interface NginxConfig {
   upstreams: UpstreamConfig[];
   servers: ServerConfig[];
   locations: LocationConfig[];
+  stream: StreamConfig;
   // Store raw config when imported - used to preserve original content exactly
   rawConfig?: string;
 }
@@ -175,7 +203,7 @@ export const defaultGlobalConfig: GlobalConfig = {
     level: 'warn',
   },
   pid: '/run/nginx.pid',
-  customDirectives: '',
+  customDirectives: 'include /usr/share/nginx/modules/*.conf;',
 };
 
 export const defaultEventsConfig: EventsConfig = {
@@ -293,6 +321,38 @@ export const createDefaultUpstream = (): UpstreamConfig => ({
   customDirectives: '',
 });
 
+export const createDefaultStreamUpstream = (): StreamUpstreamConfig => ({
+  id: uuidv4(),
+  name: 'socket_proxy',
+  hashKey: '',
+  hashConsistent: false,
+  servers: [
+    {
+      id: uuidv4(),
+      address: '127.0.0.1',
+      port: 9001,
+      weight: 1,
+      maxFails: 3,
+      failTimeout: 30,
+      backup: false,
+      down: false,
+    },
+  ],
+  customDirectives: '',
+});
+
+export const createDefaultStreamServer = (proxyPass = ''): StreamServerConfig => ({
+  id: uuidv4(),
+  name: 'TCP Proxy',
+  listenPort: 9000,
+  udp: false,
+  proxyPass,
+  proxyConnectTimeout: '10s',
+  proxyTimeout: '5m',
+  socketKeepalive: true,
+  customDirectives: '',
+});
+
 export const defaultNginxConfig: NginxConfig = {
   global: defaultGlobalConfig,
   events: defaultEventsConfig,
@@ -300,4 +360,9 @@ export const defaultNginxConfig: NginxConfig = {
   upstreams: [],
   servers: [],
   locations: [],
+  stream: {
+    upstreams: [],
+    servers: [],
+    customDirectives: '',
+  },
 };

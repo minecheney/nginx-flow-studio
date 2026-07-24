@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Zap, Globe, Plus, MapPin, Upload, LayoutTemplate } from 'lucide-react';
+import { Settings, Zap, Globe, Plus, MapPin, Upload, LayoutTemplate, Network, RadioTower } from 'lucide-react';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSwitch } from '@/components/LanguageSwitch';
@@ -30,11 +30,24 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ConfigFiles } from '@/components/sidebar/ConfigFiles';
 
 const ConfigSidebar: React.FC = () => {
-  const { config, updateGlobal, updateEvents, updateHttp, addServer, addUpstream, addLocation, selectNode } = useConfig();
+  const {
+    config,
+    updateGlobal,
+    updateEvents,
+    updateHttp,
+    addServer,
+    addUpstream,
+    addLocation,
+    addStreamServer,
+    addStreamUpstream,
+    selectNode,
+  } = useConfig();
   const { t, language } = useLanguage();
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
+  const [streamPopoverOpen, setStreamPopoverOpen] = useState(false);
 
   const handleAddServer = () => {
     const server = addServer();
@@ -53,6 +66,18 @@ const ConfigSidebar: React.FC = () => {
     selectNode(upstream.id, 'upstream');
   };
 
+  const handleAddStreamUpstream = () => {
+    const upstream = addStreamUpstream();
+    selectNode(upstream.id, 'stream-upstream');
+    setStreamPopoverOpen(false);
+  };
+
+  const handleAddStreamServer = () => {
+    const server = addStreamServer();
+    selectNode(server.id, 'stream-server');
+    setStreamPopoverOpen(false);
+  };
+
   return (
     <div
       className="w-80 bg-sidebar border-r border-sidebar-border flex flex-col h-full min-h-0 overflow-hidden"
@@ -62,7 +87,7 @@ const ConfigSidebar: React.FC = () => {
       <div className="p-4 border-b border-sidebar-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-primary/20">
+            <div className="rounded-lg border border-primary/20 bg-primary/10 p-2 shadow-[0_0_24px_-10px_hsl(var(--primary)/0.8)]">
               <Settings className="w-5 h-5 text-primary" />
             </div>
             <div>
@@ -80,6 +105,8 @@ const ConfigSidebar: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ConfigFiles />
 
       {/* Tabs: Config / Templates */}
       <Tabs defaultValue="config" className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -161,6 +188,40 @@ const ConfigSidebar: React.FC = () => {
           <Plus className="w-4 h-4 text-node-upstream" />
           {t('sidebar.addUpstream')}
         </Button>
+        <Popover open={streamPopoverOpen} onOpenChange={setStreamPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2 border-node-stream/25 text-sm hover:border-node-stream/55 hover:bg-node-stream/10"
+            >
+              <Plus className="h-4 w-4 text-node-stream" />
+              TCP / Socket
+              <span className="ml-auto text-[10px] text-muted-foreground">
+                {config.stream.servers.length} / {config.stream.upstreams.length}
+              </span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 space-y-1 p-2" align="start">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2"
+              onClick={handleAddStreamUpstream}
+            >
+              <RadioTower className="h-4 w-4 text-node-stream-upstream" />
+              {language === 'zh' ? '添加 Stream Upstream' : 'Add stream upstream'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2"
+              onClick={handleAddStreamServer}
+            >
+              <Network className="h-4 w-4 text-node-stream" />
+              {language === 'zh' ? '添加 TCP / UDP 监听' : 'Add TCP / UDP listener'}
+            </Button>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Configuration Sections */}

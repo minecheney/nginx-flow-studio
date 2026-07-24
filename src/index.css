@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,74 +6,86 @@
 
 @layer base {
   :root {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
+    --background: 205 58% 6%;
+    --foreground: 204 32% 94%;
 
-    --card: 222 47% 8%;
-    --card-foreground: 210 40% 96%;
+    --card: 207 43% 10%;
+    --card-foreground: 204 32% 94%;
 
-    --popover: 222 47% 10%;
-    --popover-foreground: 210 40% 96%;
+    --popover: 206 41% 12%;
+    --popover-foreground: 204 32% 94%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 6%;
+    --primary: 175 66% 48%;
+    --primary-foreground: 205 58% 6%;
 
-    --secondary: 222 47% 14%;
-    --secondary-foreground: 210 40% 90%;
+    --secondary: 207 35% 15%;
+    --secondary-foreground: 205 24% 88%;
 
-    --muted: 222 47% 12%;
-    --muted-foreground: 215 20% 55%;
+    --muted: 207 32% 13%;
+    --muted-foreground: 210 16% 61%;
 
-    --accent: 160 84% 39%;
-    --accent-foreground: 222 47% 6%;
+    --accent: 219 100% 65%;
+    --accent-foreground: 205 58% 6%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 4 78% 62%;
+    --destructive-foreground: 205 32% 97%;
 
-    --border: 222 47% 16%;
-    --input: 222 47% 14%;
-    --ring: 217 91% 60%;
+    --border: 205 32% 20%;
+    --input: 207 36% 13%;
+    --ring: 175 66% 48%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
 
     /* Custom tokens for node types */
-    --node-server: 217 91% 60%;
-    --node-location: 160 84% 39%;
-    --node-upstream: 38 92% 50%;
+    --node-server: 219 100% 65%;
+    --node-location: 175 66% 48%;
+    --node-upstream: 41 90% 61%;
+    --node-stream: 255 92% 76%;
+    --node-stream-upstream: 285 72% 70%;
+
+    /* Operational states */
+    --status-success: 154 62% 48%;
+    --status-warning: 41 90% 61%;
+    --status-info: 219 100% 68%;
 
     /* Sidebar */
-    --sidebar-background: 222 47% 7%;
-    --sidebar-foreground: 210 40% 90%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 222 47% 12%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 222 47% 14%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-background: 207 55% 7%;
+    --sidebar-foreground: 205 24% 89%;
+    --sidebar-primary: 175 66% 48%;
+    --sidebar-primary-foreground: 205 58% 6%;
+    --sidebar-accent: 207 38% 13%;
+    --sidebar-accent-foreground: 204 32% 94%;
+    --sidebar-border: 205 32% 18%;
+    --sidebar-ring: 175 66% 48%;
 
     /* Code preview */
-    --code-background: 222 47% 5%;
-    --code-keyword: 280 68% 70%;
-    --code-string: 160 84% 50%;
-    --code-comment: 215 20% 45%;
-    --code-variable: 38 92% 60%;
+    --code-background: 207 63% 4%;
+    --code-keyword: 255 92% 78%;
+    --code-string: 175 66% 57%;
+    --code-comment: 209 15% 48%;
+    --code-variable: 41 90% 66%;
 
     /* Canvas */
-    --canvas-background: 222 47% 4%;
-    --canvas-grid: 222 47% 10%;
+    --canvas-background: 207 63% 5%;
+    --canvas-grid: 204 33% 18%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(280 68% 60%));
-    --gradient-accent: linear-gradient(135deg, hsl(160 84% 39%), hsl(160 84% 50%));
+    --gradient-primary: linear-gradient(135deg, hsl(175 66% 48%), hsl(219 100% 65%));
+    --gradient-accent: linear-gradient(135deg, hsl(219 100% 65%), hsl(255 92% 76%));
 
     /* Shadows */
-    --shadow-node: 0 4px 20px -4px hsl(217 91% 60% / 0.3);
-    --shadow-panel: 0 8px 32px -8px hsl(0 0% 0% / 0.5);
+    --shadow-node: 0 14px 32px -20px hsl(175 66% 48% / 0.7);
+    --shadow-panel: 0 18px 50px -28px hsl(207 100% 1% / 0.92);
+    --shadow-server: 0 14px 34px -18px hsl(219 100% 65% / 0.66);
+    --shadow-location: 0 14px 34px -18px hsl(175 66% 48% / 0.62);
+    --shadow-upstream: 0 14px 34px -18px hsl(41 90% 61% / 0.58);
+    --shadow-stream: 0 14px 34px -18px hsl(255 92% 76% / 0.58);
+    --shadow-stream-upstream: 0 14px 34px -18px hsl(285 72% 70% / 0.52);
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
+    --background: 205 58% 6%;
+    --foreground: 204 32% 94%;
   }
 }
 
@@ -84,7 +96,10 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'IBM Plex Sans', 'Microsoft YaHei UI', system-ui, sans-serif;
+    background-image:
+      radial-gradient(circle at 52% -18%, hsl(var(--accent) / 0.08), transparent 35%),
+      linear-gradient(hsl(var(--background)), hsl(var(--background)));
   }
 
   code, pre, .font-mono {
@@ -95,6 +110,7 @@
 @layer components {
   .node-handle {
     @apply w-3 h-3 rounded-full border-2 border-background transition-all duration-200;
+    box-shadow: 0 0 0 3px hsl(var(--canvas-background) / 0.82);
   }
 
   .node-handle:hover {
@@ -103,6 +119,12 @@
 
   .config-section {
     @apply p-4 rounded-lg bg-card border border-border;
+  }
+
+  .node-surface {
+    background-color: hsl(var(--card) / 0.96);
+    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.035);
+    backdrop-filter: blur(10px);
   }
 
   .config-label {
@@ -137,14 +159,14 @@
 }
 
 .react-flow__minimap {
-  background-color: hsl(var(--card)) !important;
-  border-radius: 0.5rem;
+  background-color: hsl(var(--card) / 0.94) !important;
+  border-radius: 0.625rem;
   border: 1px solid hsl(var(--border));
 }
 
 .react-flow__controls {
-  background-color: hsl(var(--card)) !important;
-  border-radius: 0.5rem;
+  background-color: hsl(var(--card) / 0.94) !important;
+  border-radius: 0.625rem;
   border: 1px solid hsl(var(--border));
   box-shadow: var(--shadow-panel);
 }
@@ -161,6 +183,8 @@
 
 .react-flow__edge-path {
   stroke-width: 2;
+  filter: drop-shadow(0 0 4px hsl(var(--primary) / 0.24));
+  opacity: 0.88;
 }
 
 /* Scrollbar styling */

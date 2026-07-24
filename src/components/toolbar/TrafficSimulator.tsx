@@ -40,7 +40,7 @@ const TrafficSimulator: React.FC<TrafficSimulatorProps> = ({
   };
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-card/80 backdrop-blur-sm border-b border-border">
+    <div className="flex items-center gap-2 border-b border-border bg-card/85 px-4 py-2 shadow-[0_10px_30px_-26px_hsl(var(--primary)/0.55)] backdrop-blur-md">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Zap className="w-4 h-4 text-primary" />
         <span className="font-medium">{t('simulator.title')}</span>

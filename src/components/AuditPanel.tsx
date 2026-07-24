@@ -71,22 +71,22 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ onHighlightNode }) => {
   const getSeverityIcon = (severity: AuditSeverity) => {
     switch (severity) {
       case 'critical':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
+        return <AlertCircle className="w-4 h-4 text-destructive" />;
       case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+        return <AlertTriangle className="w-4 h-4 text-status-warning" />;
       case 'info':
-        return <Info className="w-4 h-4 text-blue-500" />;
+        return <Info className="w-4 h-4 text-status-info" />;
     }
   };
 
   const getSeverityBadgeClass = (severity: AuditSeverity) => {
     switch (severity) {
       case 'critical':
-        return 'bg-red-500/10 text-red-500 border-red-500/20';
+        return 'bg-destructive/10 text-destructive border-destructive/20';
       case 'warning':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+        return 'bg-status-warning/10 text-status-warning border-status-warning/20';
       case 'info':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+        return 'bg-status-info/10 text-status-info border-status-info/20';
     }
   };
 
@@ -104,15 +104,15 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ onHighlightNode }) => {
   const getGradeColor = (grade: AuditResult['grade']) => {
     switch (grade) {
       case 'A':
-        return 'text-green-500';
+        return 'text-status-success';
       case 'B':
-        return 'text-lime-500';
+        return 'text-node-location';
       case 'C':
-        return 'text-yellow-500';
+        return 'text-status-warning';
       case 'D':
-        return 'text-orange-500';
+        return 'text-node-upstream';
       case 'F':
-        return 'text-red-500';
+        return 'text-destructive';
     }
   };
 
@@ -182,7 +182,7 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ onHighlightNode }) => {
           size="sm"
           className={cn(
             "gap-2 relative",
-            criticalCount > 0 && "border-red-500/50 hover:border-red-500"
+            criticalCount > 0 && "border-destructive/50 hover:border-destructive"
           )}
         >
           <Stethoscope className="w-4 h-4" />
@@ -193,8 +193,8 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ onHighlightNode }) => {
               className={cn(
                 "ml-1 h-5 px-1.5 text-xs",
                 criticalCount > 0 
-                  ? "bg-red-500/10 text-red-500 border-red-500/30" 
-                  : "bg-yellow-500/10 text-yellow-500 border-yellow-500/30"
+                  ? "bg-destructive/10 text-destructive border-destructive/30"
+                  : "bg-status-warning/10 text-status-warning border-status-warning/30"
               )}
             >
               {auditResult.issues.length}
@@ -248,25 +248,25 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ onHighlightNode }) => {
             {/* Issue Summary */}
             <div className="flex gap-4 mt-3 text-sm">
               {criticalCount > 0 && (
-                <div className="flex items-center gap-1.5 text-red-500">
+                <div className="flex items-center gap-1.5 text-destructive">
                   <AlertCircle className="w-3.5 h-3.5" />
                   <span>{criticalCount} {language === 'zh' ? '严重' : 'Critical'}</span>
                 </div>
               )}
               {warningCount > 0 && (
-                <div className="flex items-center gap-1.5 text-yellow-500">
+                <div className="flex items-center gap-1.5 text-status-warning">
                   <AlertTriangle className="w-3.5 h-3.5" />
                   <span>{warningCount} {language === 'zh' ? '警告' : 'Warning'}</span>
                 </div>
               )}
               {infoCount > 0 && (
-                <div className="flex items-center gap-1.5 text-blue-500">
+                <div className="flex items-center gap-1.5 text-status-info">
                   <Info className="w-3.5 h-3.5" />
                   <span>{infoCount} {language === 'zh' ? '建议' : 'Info'}</span>
                 </div>
               )}
               {auditResult.issues.length === 0 && (
-                <div className="flex items-center gap-1.5 text-green-500">
+                <div className="flex items-center gap-1.5 text-status-success">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>{language === 'zh' ? '配置完美！' : 'Perfect Config!'}</span>
                 </div>
@@ -302,7 +302,7 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ onHighlightNode }) => {
           <div className="p-4 space-y-3">
             {auditResult.issues.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-green-500" />
+                <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-status-success" />
                 <p className="text-lg font-medium text-foreground">
                   {language === 'zh' ? '全部通过！' : 'All Clear!'}
                 </p>
@@ -323,7 +323,7 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ onHighlightNode }) => {
                     className={cn(
                       "p-4 rounded-lg border transition-all",
                       isFixed 
-                        ? "bg-green-500/5 border-green-500/20" 
+                        ? "bg-status-success/5 border-status-success/20"
                         : "bg-card border-border hover:border-primary/30",
                     )}
                     onMouseEnter={() => handleNodeHover(issue.affectedNodeId, issue.affectedNodeType)}
@@ -333,7 +333,7 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ onHighlightNode }) => {
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5">
                         {isFixed ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          <CheckCircle2 className="w-4 h-4 text-status-success" />
                         ) : (
                           getSeverityIcon(issue.severity)
                         )}
@@ -342,7 +342,7 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ onHighlightNode }) => {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={cn(
                             "font-medium",
-                            isFixed && "text-green-500 line-through"
+                            isFixed && "text-status-success line-through"
                           )}>
                             {language === 'zh' ? issue.titleZh : issue.title}
                           </span>
@@ -398,7 +398,7 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ onHighlightNode }) => {
                       )}
                       
                       {isFixed && (
-                        <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+                        <Badge className="bg-status-success/10 text-status-success border-status-success/20">
                           <CheckCircle2 className="w-3 h-3 mr-1" />
                           {language === 'zh' ? '已修复' : 'Fixed'}
                         </Badge>

@@ -11,6 +11,7 @@ import {
   Edge,
   Node,
   BackgroundVariant,
+  Panel,
   useReactFlow,
   ReactFlowProvider,
 } from '@xyflow/react';
@@ -20,14 +21,20 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import ServerNode from '@/components/nodes/ServerNode';
 import LocationNode from '@/components/nodes/LocationNode';
 import UpstreamNode from '@/components/nodes/UpstreamNode';
+import StreamServerNode from '@/components/nodes/StreamServerNode';
+import StreamUpstreamNode from '@/components/nodes/StreamUpstreamNode';
 import TrafficSimulator from '@/components/toolbar/TrafficSimulator';
 import { matchLocation } from '@/utils/locationMatcher';
-import { getLayoutedElements } from '@/utils/autoLayout';
+import { configToFlowElements, getNginxClusterLayout } from '@/utils/autoLayout';
+import { Button } from '@/components/ui/button';
+import { LayoutGrid } from 'lucide-react';
 
 const nodeTypes = {
   server: ServerNode,
   location: LocationNode,
   upstream: UpstreamNode,
+  'stream-server': StreamServerNode,
+  'stream-upstream': StreamUpstreamNode,
 };
 
 interface SimulationState {
@@ -39,10 +46,18 @@ interface SimulationState {
 }
 
 const ConfigCanvasInner: React.FC = () => {
-  const { config, selectNode, updateLocation, getLocationsByServerId } = useConfig();
+  const {
+    config,
+    activeFileId,
+    selectNode,
+    updateLocation,
+    updateStreamServer,
+    getLocationsByServerId,
+  } = useConfig();
   const { language, t } = useLanguage();
   const { fitView } = useReactFlow();
   const prevConfigRef = useRef(config);
+  const prevFileIdRef = useRef(activeFileId);
   
   const [simulation, setSimulation] = useState<SimulationState>({
     isActive: false,
@@ -53,84 +68,12 @@ const ConfigCanvasInner: React.FC = () => {
   });
 
   const initialNodes = useMemo(() => {
-    const nodes: Node[] = [];
-    let serverY = 50;
-
-    // Add server nodes
-    config.servers.forEach((server, idx) => {
-      nodes.push({
-        id: server.id,
-        type: 'server',
-        position: { x: 100 + idx * 300, y: serverY },
-        data: {
-          label: server.name,
-          serverName: server.serverName,
-          port: server.listen.port,
-          sslEnabled: server.ssl.enabled,
-        },
-      });
-    });
-
-    // Add location nodes
-    config.locations.forEach((location, idx) => {
-      const serverIdx = config.servers.findIndex(s => s.id === location.serverId);
-      nodes.push({
-        id: location.id,
-        type: 'location',
-        position: { x: 100 + serverIdx * 300, y: 200 + (idx % 3) * 100 },
-        data: {
-          label: location.path,
-          path: location.path,
-          modifier: location.modifier,
-          hasProxy: !!location.proxyPass || !!location.upstreamId,
-        },
-      });
-    });
-
-    // Add upstream nodes
-    config.upstreams.forEach((upstream, idx) => {
-      nodes.push({
-        id: upstream.id,
-        type: 'upstream',
-        position: { x: 500 + idx * 250, y: 400 },
-        data: {
-          label: upstream.name,
-          serverCount: upstream.servers.length,
-          strategy: upstream.strategy,
-        },
-      });
-    });
-
-    return nodes;
-  }, [config.servers, config.locations, config.upstreams]);
+    return configToFlowElements(config).nodes;
+  }, [config]);
 
   const initialEdges = useMemo(() => {
-    const edges: Edge[] = [];
-
-    // Server -> Location edges
-    config.locations.forEach(location => {
-      edges.push({
-        id: `${location.serverId}-${location.id}`,
-        source: location.serverId,
-        target: location.id,
-        style: { stroke: 'hsl(160, 84%, 39%)', strokeWidth: 2 },
-        animated: true,
-      });
-
-      // Location -> Upstream edges
-      if (location.upstreamId) {
-        edges.push({
-          id: `${location.id}-${location.upstreamId}`,
-          source: location.id,
-          target: location.upstreamId,
-          style: { stroke: 'hsl(38, 92%, 50%)', strokeWidth: 2 },
-          animated: true,
-        });
-      }
-    });
-
-    return edges;
-  }, [config.locations]);
+    return configToFlowElements(config).edges;
+  }, [config]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -139,57 +82,44 @@ const ConfigCanvasInner: React.FC = () => {
   useEffect(() => {
     const prevServers = prevConfigRef.current.servers;
     const prevLocations = prevConfigRef.current.locations;
+    const prevStream = prevConfigRef.current.stream;
     
     // Detect if this is an import (multiple items changed at once)
     const serversChanged = config.servers.length !== prevServers.length || 
       config.servers.some(s => !prevServers.find(ps => ps.id === s.id));
     const locationsChanged = config.locations.length !== prevLocations.length ||
       config.locations.some(l => !prevLocations.find(pl => pl.id === l.id));
+    const streamChanged = config.stream.servers.length !== prevStream.servers.length
+      || config.stream.upstreams.length !== prevStream.upstreams.length
+      || config.stream.servers.some((server) => !prevStream.servers.find((candidate) => candidate.id === server.id))
+      || config.stream.upstreams.some((upstream) => !prevStream.upstreams.find((candidate) => candidate.id === upstream.id));
+    const fileChanged = prevFileIdRef.current !== activeFileId;
     
-    if (serversChanged && locationsChanged && config.servers.length > 0) {
-      // This looks like an import - apply auto-layout
-      const rawNodes: Node[] = [];
-      const rawEdges: Edge[] = [];
-      
-      config.servers.forEach((server) => {
-        rawNodes.push({
-          id: server.id,
-          type: 'server',
-          position: { x: 0, y: 0 },
-          data: { label: server.name, serverName: server.serverName, port: server.listen.port, sslEnabled: server.ssl.enabled },
-        });
-      });
-      
-      config.locations.forEach((location) => {
-        rawNodes.push({
-          id: location.id,
-          type: 'location',
-          position: { x: 0, y: 0 },
-          data: { label: location.path, path: location.path, modifier: location.modifier, hasProxy: !!location.proxyPass },
-        });
-        rawEdges.push({ id: `e-${location.serverId}-${location.id}`, source: location.serverId, target: location.id });
-        if (location.upstreamId) {
-          rawEdges.push({ id: `e-${location.id}-${location.upstreamId}`, source: location.id, target: location.upstreamId });
-        }
-      });
-      
-      config.upstreams.forEach((upstream) => {
-        rawNodes.push({
-          id: upstream.id,
-          type: 'upstream',
-          position: { x: 0, y: 0 },
-          data: { label: upstream.name, serverCount: upstream.servers.length, strategy: upstream.strategy },
-        });
-      });
-      
-      const { nodes: layoutedNodes } = getLayoutedElements(rawNodes, rawEdges, { direction: 'TB', rankSep: 120, nodeSep: 60 });
+    const hasNodes = Boolean(
+      config.servers.length
+      || config.locations.length
+      || config.upstreams.length
+      || config.stream.servers.length
+      || config.stream.upstreams.length,
+    );
+
+    if ((fileChanged || (serversChanged && locationsChanged) || streamChanged) && hasNodes) {
+      const flow = configToFlowElements(config);
+      const { nodes: layoutedNodes } = getNginxClusterLayout(config, flow.nodes, flow.edges);
       setNodes(layoutedNodes);
       
-      setTimeout(() => fitView({ padding: 0.2 }), 100);
+      setTimeout(() => fitView({ padding: 0.16, minZoom: 0.65, maxZoom: 1 }), 100);
     }
     
     prevConfigRef.current = config;
-  }, [config, setNodes, fitView]);
+    prevFileIdRef.current = activeFileId;
+  }, [activeFileId, config, setNodes, fitView]);
+
+  const handleAutoLayout = useCallback(() => {
+    const { nodes: layoutedNodes } = getNginxClusterLayout(config, nodes, edges);
+    setNodes(layoutedNodes);
+    setTimeout(() => fitView({ padding: 0.16, minZoom: 0.65, maxZoom: 1 }), 60);
+  }, [config, edges, fitView, nodes, setNodes]);
 
   // Sync nodes when config changes
   useEffect(() => {
@@ -249,9 +179,38 @@ const ConfigCanvasInner: React.FC = () => {
         });
       });
 
+      config.stream.servers.forEach((server, idx) => {
+        const existing = prevNodes.find((node) => node.id === server.id);
+        newNodes.push({
+          id: server.id,
+          type: 'stream-server',
+          position: existing?.position || { x: 100 + idx * 280, y: 560 },
+          data: {
+            label: server.name,
+            listenPort: server.listenPort,
+            udp: server.udp,
+            proxyPass: server.proxyPass,
+          },
+        });
+      });
+
+      config.stream.upstreams.forEach((upstream, idx) => {
+        const existing = prevNodes.find((node) => node.id === upstream.id);
+        newNodes.push({
+          id: upstream.id,
+          type: 'stream-upstream',
+          position: existing?.position || { x: 100 + idx * 280, y: 710 },
+          data: {
+            label: upstream.name,
+            serverCount: upstream.servers.length,
+            hashKey: upstream.hashKey,
+          },
+        });
+      });
+
       return newNodes;
     });
-  }, [config.servers, config.locations, config.upstreams, setNodes, simulation]);
+  }, [config.servers, config.locations, config.upstreams, config.stream, setNodes, simulation]);
 
   // Sync edges when config or simulation changes
   useEffect(() => {
@@ -267,7 +226,7 @@ const ConfigCanvasInner: React.FC = () => {
         source: location.serverId,
         target: location.id,
         style: { 
-          stroke: isMatchedEdge ? 'hsl(45, 100%, 50%)' : 'hsl(160, 84%, 39%)', 
+          stroke: isMatchedEdge ? 'hsl(var(--status-success))' : 'hsl(var(--node-location))',
           strokeWidth: isMatchedEdge ? 4 : 2,
         },
         animated: true,
@@ -279,14 +238,26 @@ const ConfigCanvasInner: React.FC = () => {
           id: `${location.id}-${location.upstreamId}`,
           source: location.id,
           target: location.upstreamId,
-          style: { stroke: 'hsl(38, 92%, 50%)', strokeWidth: 2 },
+          style: { stroke: 'hsl(var(--node-upstream))', strokeWidth: 2 },
           animated: true,
         });
       }
     });
 
+    config.stream.servers.forEach((server) => {
+      const upstream = config.stream.upstreams.find((candidate) => candidate.name === server.proxyPass);
+      if (!upstream) return;
+      newEdges.push({
+        id: `stream-${server.id}-${upstream.id}`,
+        source: server.id,
+        target: upstream.id,
+        style: { stroke: 'hsl(var(--node-stream-upstream))', strokeWidth: 2 },
+        animated: true,
+      });
+    });
+
     setEdges(newEdges);
-  }, [config.locations, setEdges, simulation]);
+  }, [config.locations, config.stream.servers, config.stream.upstreams, setEdges, simulation]);
 
   const handleSimulate = useCallback((method: string, path: string) => {
     // For simplicity, we test against the first server's locations
@@ -345,14 +316,20 @@ const ConfigCanvasInner: React.FC = () => {
         return;
       }
 
+      if (sourceNode?.type === 'stream-server' && targetNode?.type === 'stream-upstream') {
+        const upstream = config.stream.upstreams.find((candidate) => candidate.id === params.target);
+        if (upstream) updateStreamServer(params.source!, { proxyPass: upstream.name });
+        return;
+      }
+
       // Generic edge add for other cases
       setEdges(eds => addEdge({
         ...params,
-        style: { stroke: 'hsl(38, 92%, 50%)', strokeWidth: 2 },
+        style: { stroke: 'hsl(var(--node-upstream))', strokeWidth: 2 },
         animated: true,
       }, eds));
     },
-    [nodes, updateLocation, setEdges]
+    [config.stream.upstreams, nodes, setEdges, updateLocation, updateStreamServer]
   );
 
   const onPaneClick = useCallback(() => {
@@ -375,29 +352,46 @@ const ConfigCanvasInner: React.FC = () => {
           onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
           fitView
+          fitViewOptions={{ padding: 0.16, minZoom: 0.65, maxZoom: 1 }}
+          minZoom={0.45}
           className="bg-canvas-background"
         >
           <Background
             variant={BackgroundVariant.Dots}
             gap={20}
             size={1}
-            color="hsl(222, 47%, 15%)"
+            color="hsl(var(--canvas-grid))"
           />
           <Controls />
+          <Panel position="top-right">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAutoLayout}
+              className="h-8 gap-1.5 bg-card/90 text-xs shadow-sm backdrop-blur"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              {language === 'zh' ? '整理布局' : 'Auto layout'}
+            </Button>
+          </Panel>
           <MiniMap
             nodeColor={(node) => {
               switch (node.type) {
                 case 'server':
-                  return 'hsl(217, 91%, 60%)';
+                  return 'hsl(var(--node-server))';
                 case 'location':
-                  return 'hsl(160, 84%, 39%)';
+                  return 'hsl(var(--node-location))';
                 case 'upstream':
-                  return 'hsl(38, 92%, 50%)';
+                  return 'hsl(var(--node-upstream))';
+                case 'stream-server':
+                  return 'hsl(var(--node-stream))';
+                case 'stream-upstream':
+                  return 'hsl(var(--node-stream-upstream))';
                 default:
-                  return '#666';
+                  return 'hsl(var(--muted-foreground))';
               }
             }}
-            maskColor="hsla(222, 47%, 6%, 0.8)"
+            maskColor="hsl(var(--canvas-background) / 0.82)"
           />
         </ReactFlow>
       </div>

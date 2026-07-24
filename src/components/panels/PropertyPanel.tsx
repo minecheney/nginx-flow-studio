@@ -4,11 +4,21 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import ServerPropertyPanel from './ServerPropertyPanel';
 import LocationPropertyPanel from './LocationPropertyPanel';
 import UpstreamPropertyPanel from './UpstreamPropertyPanel';
+import StreamServerPropertyPanel from './StreamServerPropertyPanel';
+import StreamUpstreamPropertyPanel from './StreamUpstreamPropertyPanel';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Server, MapPin, Layers, MousePointer } from 'lucide-react';
+import { Server, MapPin, Layers, MousePointer, Network } from 'lucide-react';
 
 const PropertyPanel: React.FC = () => {
-  const { selectedNodeId, selectedNodeType, getServerById, getLocationById, getUpstreamById } = useConfig();
+  const {
+    selectedNodeId,
+    selectedNodeType,
+    getServerById,
+    getLocationById,
+    getUpstreamById,
+    getStreamServerById,
+    getStreamUpstreamById,
+  } = useConfig();
   const { t, language } = useLanguage();
 
   if (!selectedNodeId || !selectedNodeType) {
@@ -40,6 +50,10 @@ const PropertyPanel: React.FC = () => {
                 <Layers className="w-4 h-4 text-node-upstream" />
                 <span>{language === 'zh' ? 'Upstream 定义后端服务器池' : 'Upstream defines backend server pools'}</span>
               </div>
+              <div className="flex items-center gap-2">
+                <Network className="h-4 w-4 text-node-stream" />
+                <span>{language === 'zh' ? 'TCP / Socket 定义四层监听' : 'TCP / Socket defines layer 4 listeners'}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -49,18 +63,31 @@ const PropertyPanel: React.FC = () => {
 
   const renderPanel = () => {
     switch (selectedNodeType) {
-      case 'server':
+      case 'server': {
         const server = getServerById(selectedNodeId);
         if (!server) return null;
         return <ServerPropertyPanel server={server} />;
-      case 'location':
+      }
+      case 'location': {
         const location = getLocationById(selectedNodeId);
         if (!location) return null;
         return <LocationPropertyPanel location={location} />;
-      case 'upstream':
+      }
+      case 'upstream': {
         const upstream = getUpstreamById(selectedNodeId);
         if (!upstream) return null;
         return <UpstreamPropertyPanel upstream={upstream} />;
+      }
+      case 'stream-server': {
+        const server = getStreamServerById(selectedNodeId);
+        if (!server) return null;
+        return <StreamServerPropertyPanel server={server} />;
+      }
+      case 'stream-upstream': {
+        const upstream = getStreamUpstreamById(selectedNodeId);
+        if (!upstream) return null;
+        return <StreamUpstreamPropertyPanel upstream={upstream} />;
+      }
       default:
         return null;
     }

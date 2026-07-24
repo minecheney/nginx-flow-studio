@@ -465,6 +465,74 @@ export const generateNginxConfig = (config: NginxConfig): string => {
   });
   
   lines.push('}');
+
+  const hasStreamConfig = Boolean(
+    config.stream.upstreams.length
+    || config.stream.servers.length
+    || config.stream.customDirectives.trim(),
+  );
+
+  if (hasStreamConfig) {
+    lines.push('');
+    lines.push('stream {');
+
+    if (config.stream.customDirectives.trim()) {
+      config.stream.customDirectives.split('\n').forEach((line) => {
+        if (line.trim()) lines.push(`${indent(1)}${ensureSemicolons(line.trim())}`);
+      });
+      lines.push('');
+    }
+
+    config.stream.upstreams.forEach((upstream) => {
+      lines.push(`${indent(1)}upstream ${upstream.name} {`);
+      if (upstream.hashKey) {
+        lines.push(`${indent(2)}hash ${upstream.hashKey}${upstream.hashConsistent ? ' consistent' : ''};`);
+      }
+      upstream.servers.forEach((server) => {
+        let serverLine = `${indent(2)}server ${server.address}:${server.port}`;
+        if (server.weight !== 1) serverLine += ` weight=${server.weight}`;
+        if (server.maxFails !== 3) serverLine += ` max_fails=${server.maxFails}`;
+        if (server.failTimeout !== 30) serverLine += ` fail_timeout=${server.failTimeout}s`;
+        if (server.backup) serverLine += ' backup';
+        if (server.down) serverLine += ' down';
+        lines.push(`${serverLine};`);
+      });
+      if (upstream.customDirectives.trim()) {
+        upstream.customDirectives.split('\n').forEach((line) => {
+          if (line.trim()) lines.push(`${indent(2)}${ensureSemicolons(line.trim())}`);
+        });
+      }
+      lines.push(`${indent(1)}}`);
+      lines.push('');
+    });
+
+    config.stream.servers.forEach((server) => {
+      lines.push(`${indent(1)}server {`);
+      lines.push(`${indent(2)}listen ${server.listenPort}${server.udp ? ' udp' : ''};`);
+      if (server.proxyConnectTimeout) {
+        lines.push(`${indent(2)}proxy_connect_timeout ${server.proxyConnectTimeout};`);
+      }
+      if (server.proxyTimeout) {
+        lines.push(`${indent(2)}proxy_timeout ${server.proxyTimeout};`);
+      }
+      if (server.socketKeepalive) {
+        lines.push(`${indent(2)}proxy_socket_keepalive on;`);
+      }
+      if (server.proxyPass) {
+        lines.push(`${indent(2)}proxy_pass ${server.proxyPass};`);
+      }
+      if (server.customDirectives.trim()) {
+        server.customDirectives.split('\n').forEach((line) => {
+          if (line.trim()) lines.push(`${indent(2)}${ensureSemicolons(line.trim())}`);
+        });
+      }
+      lines.push(`${indent(1)}}`);
+      lines.push('');
+    });
+
+    while (lines.at(-1) === '') lines.pop();
+    lines.push('}');
+  }
   
   return lines.join('\n');
 };

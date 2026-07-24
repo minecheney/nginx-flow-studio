@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Upload, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Upload, FileText, AlertCircle, CheckCircle2, Files } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { parseNginxConfig, ParseError } from '@/utils/nginxParser';
@@ -95,19 +95,21 @@ interface ImportConfigModalProps {
 
 const ImportConfigModal: React.FC<ImportConfigModalProps> = ({ children, onImportComplete }) => {
   const { language } = useLanguage();
-  const { importConfig } = useConfig();
+  const { addConfigFile } = useConfig();
   const { toast } = useToast();
   
   const [open, setOpen] = useState(false);
   const [configText, setConfigText] = useState('');
   const [parseError, setParseError] = useState<string | null>(null);
   const [parseSuccess, setParseSuccess] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const t = {
     title: language === 'zh' ? '导入 Nginx 配置' : 'Import Nginx Config',
     description: language === 'zh' 
-      ? '粘贴您的 nginx.conf 文件内容，系统将自动解析并可视化' 
-      : 'Paste your nginx.conf content, and the system will parse and visualize it',
+      ? '拖入一个或多个 .conf 文件，或粘贴源码。原始内容、注释与未知指令会原样保留。'
+      : 'Drop one or more .conf files, or paste source. Original text and comments are preserved.',
     placeholder: language === 'zh' 
       ? '在此粘贴 nginx.conf 内容...' 
       : 'Paste nginx.conf content here...',
@@ -136,13 +138,12 @@ const ImportConfigModal: React.FC<ImportConfigModalProps> = ({ children, onImpor
       setParseError(null);
       const config = parseNginxConfig(configText);
       
-      // Import the parsed config
-      importConfig(config);
+      addConfigFile('nginx.conf', config);
       
       setParseSuccess(true);
       toast({
         title: t.successTitle,
-        description: `${config.servers.length} servers, ${config.locations.length} locations, ${config.upstreams.length} upstreams`,
+        description: `${config.servers.length} servers, ${config.locations.length} locations, ${config.upstreams.length} upstreams, ${config.stream.servers.length} stream listeners`,
       });
       
       setTimeout(() => {
@@ -161,6 +162,40 @@ const ImportConfigModal: React.FC<ImportConfigModalProps> = ({ children, onImpor
         setParseError('Unknown error occurred');
       }
       setParseSuccess(false);
+    }
+  };
+
+  const handleFiles = async (fileList: FileList | File[]) => {
+    const incoming = Array.from(fileList);
+    if (!incoming.length) return;
+    const errors: string[] = [];
+    let imported = 0;
+
+    for (const file of incoming) {
+      try {
+        const source = await file.text();
+        const parsed = parseNginxConfig(source);
+        addConfigFile(file.name || 'nginx.conf', parsed);
+        imported += 1;
+      } catch (error) {
+        errors.push(`${file.name}: ${error instanceof Error ? error.message : '解析失败'}`);
+      }
+    }
+
+    if (imported) {
+      toast({
+        title: language === 'zh' ? `已导入 ${imported} 个配置文件` : `Imported ${imported} config files`,
+        description: language === 'zh' ? '每个文件都保留为独立配置，可在左侧切换。' : 'Each file is kept separately in the sidebar.',
+      });
+      setParseSuccess(true);
+    }
+    if (errors.length) setParseError(errors.join('\n'));
+    if (imported && !errors.length) {
+      setTimeout(() => {
+        setOpen(false);
+        setParseSuccess(false);
+        onImportComplete?.();
+      }, 350);
     }
   };
 
@@ -190,6 +225,45 @@ const ImportConfigModal: React.FC<ImportConfigModalProps> = ({ children, onImpor
         </DialogHeader>
         
         <div className="flex-1 space-y-4 overflow-hidden">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".conf,.nginx,text/plain"
+            multiple
+            className="hidden"
+            onChange={(event) => {
+              if (event.target.files) void handleFiles(event.target.files);
+              event.target.value = '';
+            }}
+          />
+          <button
+            type="button"
+            className={`flex w-full items-center justify-center gap-3 rounded-lg border border-dashed px-4 py-5 text-left transition-colors ${
+              isDragging ? 'border-primary bg-primary/10' : 'border-border bg-muted/30 hover:border-primary/50 hover:bg-muted/50'
+            }`}
+            onClick={() => fileInputRef.current?.click()}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragOver={(event) => event.preventDefault()}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setIsDragging(false);
+              void handleFiles(event.dataTransfer.files);
+            }}
+          >
+            <Files className="h-6 w-6 text-primary" />
+            <span>
+              <span className="block text-sm font-medium">
+                {language === 'zh' ? '拖入多个 Nginx 配置文件' : 'Drop multiple Nginx config files'}
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                {language === 'zh' ? '支持 .conf，点击也可选择文件' : 'Supports .conf; click to browse'}
+              </span>
+            </span>
+          </button>
           <div className="flex justify-end">
             <Button 
               variant="ghost" 
@@ -224,10 +298,10 @@ const ImportConfigModal: React.FC<ImportConfigModalProps> = ({ children, onImpor
           )}
           
           {parseSuccess && (
-            <Alert className="border-green-500/50 bg-green-500/10">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <AlertTitle className="text-green-500">{t.successTitle}</AlertTitle>
-              <AlertDescription className="text-green-500/80">
+            <Alert className="border-status-success/40 bg-status-success/10">
+              <CheckCircle2 className="h-4 w-4 text-status-success" />
+              <AlertTitle className="text-status-success">{t.successTitle}</AlertTitle>
+              <AlertDescription className="text-status-success/80">
                 {t.successMsg}
               </AlertDescription>
             </Alert>

@@ -55,11 +55,10 @@ const UpstreamNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     <div
       onClick={handleClick}
       className={cn(
-        'px-4 py-3 rounded-lg border-2 min-w-[180px] cursor-pointer transition-all duration-200',
-        'bg-card hover:bg-muted',
+        'node-surface px-4 py-3 rounded-xl border min-w-[180px] cursor-pointer transition-all duration-200 hover:bg-muted/90',
         selected
-          ? 'border-node-upstream shadow-[0_4px_20px_-4px_hsl(38_92%_50%/0.3)]'
-          : 'border-border hover:border-node-upstream/50'
+          ? 'border-node-upstream shadow-upstream ring-1 ring-node-upstream/20'
+          : 'border-node-upstream/25 hover:border-node-upstream/55'
       )}
     >
       <Handle
@@ -70,7 +69,7 @@ const UpstreamNode: React.FC<NodeProps> = ({ id, data, selected }) => {
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded bg-node-upstream/20">
+          <div className="p-1.5 rounded-md border border-node-upstream/15 bg-node-upstream/10">
             <Layers className="w-4 h-4 text-node-upstream" />
           </div>
           <div>

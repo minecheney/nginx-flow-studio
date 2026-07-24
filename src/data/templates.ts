@@ -109,6 +109,7 @@ const createSpaTemplate = (): TemplateDefinition => {
       upstreams: [],
       servers: [server],
       locations: [locationRoot, locationStatic],
+      stream: { upstreams: [], servers: [], customDirectives: '' },
     },
   };
 };
@@ -195,6 +196,7 @@ if ($invalid_referer) {
       upstreams: [],
       servers: [server],
       locations: [locationAssets, locationRoot],
+      stream: { upstreams: [], servers: [], customDirectives: '' },
     },
   };
 };
@@ -275,6 +277,7 @@ proxy_send_timeout 60s;
       upstreams: [upstream],
       servers: [server],
       locations: [locationApi],
+      stream: { upstreams: [], servers: [], customDirectives: '' },
     },
   };
 };
@@ -374,6 +377,7 @@ proxy_buffers 4 256k;
       upstreams: [upstream],
       servers: [server],
       locations: [location, locationStatic],
+      stream: { upstreams: [], servers: [], customDirectives: '' },
     },
   };
 };
@@ -477,6 +481,7 @@ proxy_send_timeout 86400s;`,
       upstreams: [upstream],
       servers: [server],
       locations: [locationWs, locationApi],
+      stream: { upstreams: [], servers: [], customDirectives: '' },
     },
   };
 };
@@ -584,6 +589,7 @@ fastcgi_busy_buffers_size 256k;`,
       upstreams: [],
       servers: [server],
       locations: [locationRoot, locationPhp, locationStatic],
+      stream: { upstreams: [], servers: [], customDirectives: '' },
     },
   };
 };
@@ -666,6 +672,7 @@ proxy_next_upstream_tries 3;
       upstreams: [upstream],
       servers: [server],
       locations: [location],
+      stream: { upstreams: [], servers: [], customDirectives: '' },
     },
   };
 };
@@ -745,6 +752,7 @@ proxy_set_header Connection "";
       upstreams: [upstream],
       servers: [server],
       locations: [location],
+      stream: { upstreams: [], servers: [], customDirectives: '' },
     },
   };
 };
@@ -827,6 +835,7 @@ add_header X-XSS-Protection "1; mode=block" always;`,
       upstreams: [],
       servers: [serverHttp, serverHttps],
       locations: [locationHttps],
+      stream: { upstreams: [], servers: [], customDirectives: '' },
     },
   };
 };

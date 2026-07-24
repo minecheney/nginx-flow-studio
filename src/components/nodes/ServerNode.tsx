@@ -38,11 +38,11 @@ const ServerNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     <div
       onClick={handleClick}
       className={cn(
-        'px-4 py-3 rounded-lg border-2 min-w-[200px] cursor-pointer transition-all duration-200',
-        'bg-card hover:bg-muted',
+        'node-surface px-4 py-3 rounded-xl border min-w-[200px] cursor-pointer transition-all duration-200',
+        'hover:bg-muted/90',
         selected
-          ? 'border-node-server shadow-node'
-          : 'border-border hover:border-node-server/50'
+          ? 'border-node-server shadow-server ring-1 ring-node-server/20'
+          : 'border-node-server/25 hover:border-node-server/55'
       )}
     >
       <Handle
@@ -53,7 +53,7 @@ const ServerNode: React.FC<NodeProps> = ({ id, data, selected }) => {
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded bg-node-server/20">
+          <div className="p-1.5 rounded-md border border-node-server/15 bg-node-server/10">
             <Server className="w-4 h-4 text-node-server" />
           </div>
           <div>

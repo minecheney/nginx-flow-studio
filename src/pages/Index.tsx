@@ -15,7 +15,7 @@ const Index = () => {
           href="https://github.com/Anarkh-Lee/nginx-flow"
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute top-3 right-3 z-50 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border hover:bg-accent transition-colors"
+          className="absolute top-3 right-3 z-50 rounded-lg border border-border bg-card/80 p-2 shadow-panel backdrop-blur-sm transition-colors hover:border-primary/40 hover:bg-primary/10"
           title="View on GitHub"
         >
           <Github className="h-5 w-5 text-foreground" />

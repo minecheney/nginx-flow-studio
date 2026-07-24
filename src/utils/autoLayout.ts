@@ -64,6 +64,115 @@ export function getLayoutedElements(
   return { nodes: layoutedNodes, edges };
 }
 
+/**
+ * Nginx topology is a set of Server-centred groups, not a generic deep graph.
+ * Dagre may assign sibling Location nodes to different ranks when some of them
+ * connect to an Upstream, which creates a long vertical pile. Nginx Flow's
+ * expected topology keeps every Server's Locations on one horizontal rank and
+ * puts Upstreams on a separate bottom row.
+ */
+export function getNginxClusterLayout(
+  config: NginxConfig,
+  nodes: Node[],
+  edges: Edge[],
+): { nodes: Node[]; edges: Edge[] } {
+  const positions = new Map<string, { x: number; y: number }>();
+  const serverWidth = 240;
+  const locationWidth = 230;
+  const upstreamWidth = 220;
+  const horizontalGap = 48;
+  const clusterGap = 110;
+  const locationTop = 190;
+  const locationRowStep = 145;
+  let cursorX = 60;
+  let maxLocationRows = 0;
+
+  config.servers.forEach((server) => {
+    const locations = config.locations.filter((location) => location.serverId === server.id);
+    const columns = Math.max(1, locations.length);
+    const clusterWidth = Math.max(
+      serverWidth,
+      columns * locationWidth + Math.max(0, columns - 1) * horizontalGap,
+    );
+
+    positions.set(server.id, {
+      x: cursorX + (clusterWidth - serverWidth) / 2,
+      y: 35,
+    });
+
+    locations.forEach((location, index) => {
+      positions.set(location.id, {
+        x: cursorX + index * (locationWidth + horizontalGap),
+        y: locationTop,
+      });
+    });
+
+    maxLocationRows = Math.max(maxLocationRows, locations.length ? 1 : 0);
+    cursorX += clusterWidth + clusterGap;
+  });
+
+  const unassignedLocations = config.locations.filter(
+    (location) => !config.servers.some((server) => server.id === location.serverId),
+  );
+  unassignedLocations.forEach((location, index) => {
+    positions.set(location.id, {
+      x: cursorX + index * (locationWidth + horizontalGap),
+      y: locationTop,
+    });
+  });
+
+  const contentWidth = Math.max(cursorX - clusterGap, 760);
+  const upstreamTop = locationTop + Math.max(1, maxLocationRows) * locationRowStep + 55;
+  const upstreamGap = 70;
+  const upstreamsWidth = config.upstreams.length
+    ? config.upstreams.length * upstreamWidth + (config.upstreams.length - 1) * upstreamGap
+    : 0;
+  const upstreamStart = Math.max(60, (contentWidth - upstreamsWidth) / 2);
+
+  config.upstreams.forEach((upstream, index) => {
+    positions.set(upstream.id, {
+      x: upstreamStart + index * (upstreamWidth + upstreamGap),
+      y: upstreamTop,
+    });
+  });
+
+  const streamNodeGap = 70;
+  const streamServerWidth = 230;
+  const streamUpstreamWidth = 230;
+  const streamServerTop = upstreamTop + (config.upstreams.length ? 155 : 70);
+  const streamUpstreamTop = streamServerTop + 150;
+  const streamServersWidth = config.stream.servers.length
+    ? config.stream.servers.length * streamServerWidth + (config.stream.servers.length - 1) * streamNodeGap
+    : 0;
+  const streamUpstreamsWidth = config.stream.upstreams.length
+    ? config.stream.upstreams.length * streamUpstreamWidth + (config.stream.upstreams.length - 1) * streamNodeGap
+    : 0;
+  const streamServerStart = Math.max(60, (contentWidth - streamServersWidth) / 2);
+  const streamUpstreamStart = Math.max(60, (contentWidth - streamUpstreamsWidth) / 2);
+
+  config.stream.servers.forEach((server, index) => {
+    positions.set(server.id, {
+      x: streamServerStart + index * (streamServerWidth + streamNodeGap),
+      y: streamServerTop,
+    });
+  });
+
+  config.stream.upstreams.forEach((upstream, index) => {
+    positions.set(upstream.id, {
+      x: streamUpstreamStart + index * (streamUpstreamWidth + streamNodeGap),
+      y: streamUpstreamTop,
+    });
+  });
+
+  return {
+    nodes: nodes.map((node) => ({
+      ...node,
+      position: positions.get(node.id) ?? node.position,
+    })),
+    edges,
+  };
+}
+
 // Generate nodes and edges from NginxConfig for React Flow
 import { NginxConfig } from '@/types/nginx';
 
@@ -96,7 +205,7 @@ export function configToFlowElements(config: NginxConfig): { nodes: Node[]; edge
         label: `${location.modifier || ''} ${location.path}`.trim(),
         path: location.path,
         modifier: location.modifier,
-        isProxy: !!location.proxyPass || !!location.upstreamId,
+        hasProxy: !!location.proxyPass || !!location.upstreamId,
       },
     });
 
@@ -136,10 +245,43 @@ export function configToFlowElements(config: NginxConfig): { nodes: Node[]; edge
     });
   });
 
-  // Apply auto layout
-  return getLayoutedElements(nodes, edges, { 
-    direction: 'TB',
-    rankSep: 120,
-    nodeSep: 60,
+  config.stream.servers.forEach((server) => {
+    nodes.push({
+      id: server.id,
+      type: 'stream-server',
+      position: { x: 0, y: 0 },
+      data: {
+        label: server.name,
+        listenPort: server.listenPort,
+        udp: server.udp,
+        proxyPass: server.proxyPass,
+      },
+    });
+    const upstream = config.stream.upstreams.find((candidate) => candidate.name === server.proxyPass);
+    if (upstream) {
+      edges.push({
+        id: `e-stream-${server.id}-${upstream.id}`,
+        source: server.id,
+        target: upstream.id,
+        type: 'smoothstep',
+        animated: true,
+        style: { stroke: 'hsl(var(--node-stream-upstream))' },
+      });
+    }
   });
+
+  config.stream.upstreams.forEach((upstream) => {
+    nodes.push({
+      id: upstream.id,
+      type: 'stream-upstream',
+      position: { x: 0, y: 0 },
+      data: {
+        label: upstream.name,
+        serverCount: upstream.servers.length,
+        hashKey: upstream.hashKey,
+      },
+    });
+  });
+
+  return getNginxClusterLayout(config, nodes, edges);
 }
