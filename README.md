@@ -1,6 +1,13 @@
-# Nginx Config Visual Editor / Nginx 可视化配置编辑器
+# Nginx Flow Studio / Nginx 可视化配置工作台
 
 [English](#english) | [中文](#中文)
+
+> 本项目基于 [Anarkh-Lee/nginx-flow](https://github.com/Anarkh-Lee/nginx-flow) 修改并持续扩展，感谢原作者提供的可视化配置基础。当前版本新增了多配置文件管理、无损源码导入与编辑、`stream` / TCP / Socket 配置、源码定位以及可直接使用的 `.conf` 导出等能力。
+>
+> This project is based on [Anarkh-Lee/nginx-flow](https://github.com/Anarkh-Lee/nginx-flow) and extends it with multi-file workspaces, lossless source editing, `stream` / TCP / Socket support, source navigation, and deployable `.conf` exports.
+
+- 当前仓库 / Repository: [minecheney/nginx-flow-studio](https://github.com/minecheney/nginx-flow-studio)
+- 在线体验 / Live Demo: [nginx-flow-studio.vercel.app](https://nginx-flow-studio.vercel.app)
 
 ---
 
@@ -9,7 +16,7 @@
 
 ### 📖 项目简介
 
-**Nginx Config Visual Editor** 是一款功能强大的 Nginx 配置文件可视化编辑工具。通过直观的拖拽式画布界面，帮助运维工程师和开发者快速构建、调试和优化 Nginx 配置，彻底告别繁琐的手写配置和语法错误。
+**Nginx Flow Studio** 是一款基于 `nginx-flow` 扩展的 Nginx 配置文件可视化工作台。它在保留节点化画布体验的同时，支持多配置文件、源码与可视化双向编辑、原始注释与未知指令保留，以及 HTTP 和 Stream 配置管理。
 
 ### ✨ 核心特性
 
@@ -215,10 +222,10 @@
 
 ```bash
 # 克隆仓库
-git clone <YOUR_GIT_URL>
+git clone https://github.com/minecheney/nginx-flow-studio.git
 
 # 进入项目目录
-cd <YOUR_PROJECT_NAME>
+cd nginx-flow-studio
 
 # 安装依赖
 npm install
@@ -437,10 +444,10 @@ Complete Chinese and English interface switching, including:
 
 ```bash
 # Clone the repository
-git clone <YOUR_GIT_URL>
+git clone https://github.com/minecheney/nginx-flow-studio.git
 
 # Navigate to project directory
-cd <YOUR_PROJECT_NAME>
+cd nginx-flow-studio
 
 # Install dependencies
 npm install
