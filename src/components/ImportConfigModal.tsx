@@ -3,6 +3,7 @@ import { Upload, FileText, AlertCircle, CheckCircle2, Files } from 'lucide-react
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { parseNginxConfig, ParseError } from '@/utils/nginxParser';
+import { prepareImportedNginxSource } from '@/utils/sourceTools';
 import {
   Dialog,
   DialogContent,
@@ -136,7 +137,8 @@ const ImportConfigModal: React.FC<ImportConfigModalProps> = ({ children, onImpor
 
     try {
       setParseError(null);
-      const config = parseNginxConfig(configText);
+      const formattedSource = prepareImportedNginxSource(configText);
+      const config = parseNginxConfig(formattedSource);
       
       addConfigFile('nginx.conf', config);
       
@@ -174,7 +176,7 @@ const ImportConfigModal: React.FC<ImportConfigModalProps> = ({ children, onImpor
     for (const file of incoming) {
       try {
         const source = await file.text();
-        const parsed = parseNginxConfig(source);
+        const parsed = parseNginxConfig(prepareImportedNginxSource(source));
         addConfigFile(file.name || 'nginx.conf', parsed);
         imported += 1;
       } catch (error) {

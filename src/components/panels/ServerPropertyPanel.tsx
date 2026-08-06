@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getSslToggleUpdate } from '@/utils/serverSettings';
 
 interface ServerPropertyPanelProps {
   server: ServerConfig;
@@ -98,7 +99,7 @@ const ServerPropertyPanel: React.FC<ServerPropertyPanelProps> = ({ server }) => 
             <Label className="text-xs text-muted-foreground">{t('server.sslEnabled')}</Label>
             <Switch
               checked={server.ssl.enabled}
-              onCheckedChange={(checked) => updateServer(server.id, { ssl: { ...server.ssl, enabled: checked } })}
+              onCheckedChange={(checked) => updateServer(server.id, getSslToggleUpdate(server, checked))}
             />
           </div>
           

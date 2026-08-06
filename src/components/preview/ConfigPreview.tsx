@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateNginxConfig } from '@/utils/configGenerator';
@@ -13,6 +13,7 @@ import {
   Container,
   Copy,
   Download,
+  GripHorizontal,
   Pencil,
   Save,
   WandSparkles,
@@ -24,6 +25,17 @@ import {
   findNodeSourceRange,
   type SourceNodeRange,
 } from '@/utils/sourceLocator';
+
+const PREVIEW_HEIGHT = 256;
+const EDITOR_MIN_HEIGHT = 300;
+const PREVIEW_MIN_HEIGHT = 180;
+
+const clampPanelHeight = (height: number, editing: boolean) => {
+  const viewportHeight = typeof window === 'undefined' ? 900 : window.innerHeight;
+  const minimum = editing ? EDITOR_MIN_HEIGHT : PREVIEW_MIN_HEIGHT;
+  const maximum = Math.max(minimum, Math.round(viewportHeight * 0.76));
+  return Math.min(maximum, Math.max(minimum, Math.round(height)));
+};
 
 const ConfigPreview: React.FC = () => {
   const {
@@ -38,6 +50,15 @@ const ConfigPreview: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [panelHeight, setPanelHeight] = useState(PREVIEW_HEIGHT);
+  const [isResizing, setIsResizing] = useState(false);
+  const restoreHeightRef = useRef(PREVIEW_HEIGHT);
+  const resizeStateRef = useRef<{
+    pointerId: number;
+    startY: number;
+    startHeight: number;
+    moved: boolean;
+  } | null>(null);
 
   const configText = useMemo(() => generateNginxConfig(config), [config]);
   const [draft, setDraft] = useState(configText);
@@ -55,6 +76,80 @@ const ConfigPreview: React.FC = () => {
     setIsEditing(false);
     setFocusTarget(null);
   }, [activeFile.id, configText]);
+
+  useEffect(() => {
+    const handleWindowResize = () => {
+      setPanelHeight((current) => clampPanelHeight(current, isEditing));
+    };
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [isEditing]);
+
+  const togglePanelSize = useCallback(() => {
+    if (!isExpanded) {
+      setIsExpanded(true);
+      setPanelHeight(clampPanelHeight(restoreHeightRef.current, isEditing));
+      return;
+    }
+
+    const maximum = clampPanelHeight(Number.MAX_SAFE_INTEGER, isEditing);
+    setPanelHeight((current) => {
+      if (current >= maximum - 16) {
+        return clampPanelHeight(restoreHeightRef.current, isEditing);
+      }
+      restoreHeightRef.current = current;
+      return maximum;
+    });
+  }, [isEditing, isExpanded]);
+
+  const handleResizePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    resizeStateRef.current = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startHeight: panelHeight,
+      moved: false,
+    };
+    setIsExpanded(true);
+    setIsResizing(true);
+  };
+
+  const handleResizePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const resizeState = resizeStateRef.current;
+    if (!resizeState || resizeState.pointerId !== event.pointerId) return;
+    const delta = resizeState.startY - event.clientY;
+    if (Math.abs(delta) > 3) resizeState.moved = true;
+    const nextHeight = clampPanelHeight(resizeState.startHeight + delta, isEditing);
+    restoreHeightRef.current = nextHeight;
+    setPanelHeight(nextHeight);
+  };
+
+  const handleResizePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    const resizeState = resizeStateRef.current;
+    if (!resizeState || resizeState.pointerId !== event.pointerId) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    resizeStateRef.current = null;
+    setIsResizing(false);
+    if (!resizeState.moved) togglePanelSize();
+  };
+
+  const handleResizeKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      togglePanelSize();
+      return;
+    }
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    event.preventDefault();
+    setIsExpanded(true);
+    setPanelHeight((current) => {
+      const nextHeight = clampPanelHeight(current + (event.key === 'ArrowUp' ? 32 : -32), isEditing);
+      restoreHeightRef.current = nextHeight;
+      return nextHeight;
+    });
+  };
 
   useEffect(() => {
     if (!selectedNodeId || !selectedNodeType) {
@@ -191,10 +286,29 @@ const ConfigPreview: React.FC = () => {
     });
   }, [configText]);
 
-  const expandedHeight = isEditing ? 'h-[42vh] min-h-[300px]' : 'h-64';
-
   return (
-    <div className={`bg-code-background border-t border-border transition-[height] duration-300 ${isExpanded ? expandedHeight : 'h-10'}`}>
+    <div
+      className={`relative shrink-0 bg-code-background border-t border-border ${isResizing ? '' : 'transition-[height] duration-200'}`}
+      style={{ height: isExpanded ? panelHeight : 40 }}
+    >
+      <div
+        role="separator"
+        aria-label={language === 'zh' ? '调整源码编辑区高度' : 'Resize source editor'}
+        aria-orientation="horizontal"
+        aria-valuenow={panelHeight}
+        tabIndex={0}
+        title={language === 'zh' ? '拖动调整高度，点击放大或还原' : 'Drag to resize; click to maximize or restore'}
+        className="group absolute inset-x-0 -top-1.5 z-30 flex h-3 cursor-row-resize touch-none items-center justify-center outline-none"
+        onPointerDown={handleResizePointerDown}
+        onPointerMove={handleResizePointerMove}
+        onPointerUp={handleResizePointerUp}
+        onPointerCancel={handleResizePointerUp}
+        onKeyDown={handleResizeKeyDown}
+      >
+        <span className="flex h-2.5 w-14 items-center justify-center rounded-full border border-border/80 bg-card text-muted-foreground shadow-sm transition-colors group-hover:border-primary/60 group-hover:bg-primary/15 group-hover:text-primary group-focus-visible:ring-2 group-focus-visible:ring-primary/60">
+          <GripHorizontal className="h-3.5 w-3.5" />
+        </span>
+      </div>
       <div className="h-10 px-4 flex items-center justify-between border-b border-border bg-card">
         <button
           type="button"
@@ -252,6 +366,10 @@ const ConfigPreview: React.FC = () => {
                 setDraft(configText);
                 setIsExpanded(true);
                 setIsEditing(true);
+                setPanelHeight((current) => clampPanelHeight(
+                  Math.max(current, window.innerHeight * 0.42),
+                  true,
+                ));
               }}
             >
               <Pencil className="h-3 w-3" />

@@ -26,6 +26,7 @@ import {
 } from '@/types/nginx';
 import { parseNginxConfig } from '@/utils/nginxParser';
 import { mergeNginxConfigSource } from '@/utils/sourceMerge';
+import { preserveVisualNodeIds } from '@/utils/configIdentity';
 
 export interface ConfigFile {
   id: string;
@@ -302,10 +303,25 @@ export const ConfigProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, [activeFileId, resetSelection]);
 
   const applySource = useCallback((source: string) => {
-    const parsed = parseNginxConfig(source);
+    const parsed = preserveVisualNodeIds(config, parseNginxConfig(source));
     parsed.rawConfig = source;
-    importConfig(parsed);
-  }, [importConfig]);
+    setFiles((currentFiles) => currentFiles.map((file) => (
+      file.id === activeFileId
+        ? { ...file, config: parsed, updatedAt: new Date().toISOString() }
+        : file
+    )));
+
+    if (selectedNodeId) {
+      const remainingNodeIds = new Set([
+        ...parsed.servers.map((server) => server.id),
+        ...parsed.locations.map((location) => location.id),
+        ...parsed.upstreams.map((upstream) => upstream.id),
+        ...parsed.stream.servers.map((server) => server.id),
+        ...parsed.stream.upstreams.map((upstream) => upstream.id),
+      ]);
+      if (!remainingNodeIds.has(selectedNodeId)) resetSelection();
+    }
+  }, [activeFileId, config, resetSelection, selectedNodeId]);
 
   const updateGlobal = useCallback((updates: Partial<GlobalConfig>) => {
     updateActiveConfig((previous) => ({ ...previous, global: { ...previous.global, ...updates } }));

@@ -141,3 +141,7 @@ export const formatNginxConfig = (config: string) => {
   while (output.at(-1) === '') output.pop();
   return `${output.join('\n')}\n`;
 };
+
+// Import formatting is intentionally whitespace-only. Parsing and visualizing
+// the returned text must never inject, remove, or rewrite Nginx directives.
+export const prepareImportedNginxSource = (source: string) => formatNginxConfig(source);

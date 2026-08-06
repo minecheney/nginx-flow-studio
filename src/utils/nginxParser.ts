@@ -482,7 +482,7 @@ function convertBlockToServer(block: ASTBlock): { server: ServerConfig; location
       http2: false,
     },
     serverName: 'localhost',
-    ssl: { ...defaultSSLConfig },
+    ssl: { ...defaultSSLConfig, forceRedirect: false },
     root: '/var/www/html',
     index: ['index.html', 'index.htm'],
     customDirectives: '',
@@ -829,6 +829,38 @@ function convertHttpBlock(block: ASTBlock): {
   return { http, servers, locations, upstreams };
 }
 
+const HTTPS_REDIRECT_DIRECTIVE = /^return\s+(?:301|302|307|308)\s+https:\/\/\$(?:server_name|host)\$request_uri;$/m;
+
+const foldHttpsRedirectServers = (config: NginxConfig) => {
+  const redirectServerIds = new Set<string>();
+
+  config.servers.forEach((candidate) => {
+    if (
+      candidate.listen.port !== 80
+      || candidate.ssl.enabled
+      || config.locations.some((location) => location.serverId === candidate.id)
+      || !HTTPS_REDIRECT_DIRECTIVE.test(candidate.customDirectives)
+    ) {
+      return;
+    }
+
+    const redirectNames = new Set(candidate.serverName.split(/\s+/).filter(Boolean));
+    const target = config.servers.find((server) => (
+      server.id !== candidate.id
+      && server.ssl.enabled
+      && server.serverName.split(/\s+/).some((name) => redirectNames.has(name))
+    ));
+    if (!target) return;
+
+    target.ssl.forceRedirect = true;
+    redirectServerIds.add(candidate.id);
+  });
+
+  if (redirectServerIds.size) {
+    config.servers = config.servers.filter((server) => !redirectServerIds.has(server.id));
+  }
+};
+
 // ============== Main Parse Function ==============
 
 export function parseNginxConfig(configString: string): NginxConfig {
@@ -879,6 +911,8 @@ export function parseNginxConfig(configString: string): NginxConfig {
       config.locations.push(...locations);
     }
   }
+
+  foldHttpsRedirectServers(config);
 
   // Link locations to upstreams by proxy_pass
   for (const location of config.locations) {
